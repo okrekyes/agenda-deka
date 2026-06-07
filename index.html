@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agenda Deka">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2693/2693507.png">
+    <title>Agenda Kegiatan</title>
+    <style>
+        /* (Gunakan CSS yang sudah Anda buat sebelumnya) */
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
+        :root { --text-main: #ffffff; --accent-red: #ff3b30; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
+        body { margin: 0; padding: 20px; min-height: 100vh; color: var(--text-main); background: linear-gradient(-45deg, #0f0c29, #302b63, #050505); background-size: 400% 400%; animation: bg 15s ease infinite; }
+        @keyframes bg { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .box { background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        h1 { font-family: 'Oswald', sans-serif; font-size: 2.2em; text-align: center; text-transform: uppercase; background: -webkit-linear-gradient(45deg, #00ff44, #ccff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        input, select { width: 100%; padding: 15px; margin: 5px 0; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; }
+        button { width: 100%; padding: 15px; background: #ff3b30; color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .cell { padding: 10px 2px; border-radius: 8px; background: rgba(255,255,255,0.05); font-size: 0.9em; min-height: 45px; display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
+        .item { background: rgba(0,0,0,0.4); padding: 15px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid; }
+        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>AGENDA KEGIATAN</h1>
+    <div class="box">
+        <input type="text" id="j" placeholder="Ketik agenda...">
+        <input type="datetime-local" id="w">
+        <select id="k"><option value="ringan">RINGAN</option><option value="agak-penting">AGAK PENTING</option><option value="sangat-penting">SANGAT PENTING</option></select>
+        <button onclick="tambah()">Simpan Agenda</button>
+    </div>
+    <div class="box">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <div onclick="nav.setMonth(nav.getMonth()-1); render()">◀</div><h3 id="bt" style="margin:0"></h3><div onclick="nav.setMonth(nav.getMonth()+1); render()">▶</div>
+        </div>
+        <div class="grid" id="kl"></div>
+    </div>
+    <div class="box" id="list"></div>
+    <div id="modal"><div class="box" id="mb" style="text-align:center; border: 2px solid;">
+        <h2 id="mj">WAKTU TIBA!</h2>
+        <button id="bs" onclick="stop()">Hentikan Alarm</button>
+    </div></div>
+<script>
+    let d = JSON.parse(localStorage.getItem('ag')) || [];
+    let nav = new Date();
+    let ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let alarmInt;
+
+    function play(k) {
+        if (ctx.state === 'suspended') ctx.resume();
+        let osc = ctx.createOscillator();
+        let gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = k==='ringan' ? 'sine' : (k==='agak-penting' ? 'square' : 'sawtooth');
+        osc.frequency.value = k==='ringan' ? 500 : (k==='agak-penting' ? 800 : 1200);
+        osc.start(); osc.stop(ctx.currentTime + 0.5);
+    }
+
+    function tambah() {
+        let j = document.getElementById('j').value, w = document.getElementById('w').value, k = document.getElementById('k').value;
+        if (!j || !w) return alert('Lengkapi data!');
+        d.push({ id: Date.now(), j, w, k, s: false });
+        localStorage.setItem('ag', JSON.stringify(d));
+        document.getElementById('j').value = ''; document.getElementById('w').value = '';
+        render();
+    }
+
+    function render() {
+        let y = nav.getFullYear(), m = nav.getMonth(), grid = document.getElementById('kl');
+        document.getElementById('bt').innerText = nav.toLocaleString('id-ID', {month:'long', year:'numeric'});
+        let html = ''; for(let i=0; i<new Date(y,m,1).getDay(); i++) html += '<div class="cell"></div>';
+        for(let day=1; day<=new Date(y, m+1, 0).getDate(); day++) {
+            let str = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            let k = [...new Set(d.filter(a => a.w.startsWith(str)).map(a => a.k))];
+            let s = k.length > 0 ? `background: ${k.length===1 ? {'ringan':'#00ff44','agak-penting':'#ffea00','sangat-penting':'#ff1100'}[k[0]] : 'linear-gradient(45deg,#00ff44,#ff1100)'}; color:#000; font-weight:bold;` : '';
+            html += `<div class="cell" style="${s}">${day}</div>`;
+        }
+        grid.innerHTML = html;
+        let l = '<h2>Agenda Mendatang</h2>';
+        d.sort((a,b) => new Date(a.w)-new Date(b.w)).forEach(a => {
+            let color = {'ringan':'#00ff44','agak-penting':'#ffea00','sangat-penting':'#ff1100'}[a.k];
+            l += `<div class="item" style="border-color:${color}"><div><strong>${a.j}</strong><br><small>${new Date(a.w).toLocaleString()}</small></div><button style="width:auto;" onclick="hapus(${a.id})">X</button></div>`;
+        });
+        document.getElementById('list').innerHTML = l;
+    }
+
+    function hapus(id) { d = d.filter(a => a.id != id); localStorage.setItem('ag', JSON.stringify(d)); render(); }
+    function stop() { document.getElementById('modal').style.display = 'none'; clearInterval(alarmInt); }
+    setInterval(() => {
+        d.forEach(a => {
+            if (!a.s && Math.abs(new Date(a.w).getTime() - Date.now()) < 3000) {
+                a.s = true; document.getElementById('mj').innerText = a.j;
+                let c = {'ringan':'#00ff44','agak-penting':'#ffea00','sangat-penting':'#ff1100'}[a.k];
+                document.getElementById('mb').style.borderColor = c; document.getElementById('bs').style.background = c;
+                document.getElementById('modal').style.display = 'flex';
+                alarmInt = setInterval(() => play(a.k), 1000);
+            }
+        });
+    }, 3000);
+    render();
+</script>
+</body>
+</html>
