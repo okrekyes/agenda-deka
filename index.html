@@ -20,7 +20,13 @@
         button { width: 100%; padding: 15px; background: #ff3b30; color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cell { padding: 10px 2px; border-radius: 8px; background: rgba(255,255,255,0.05); font-size: 0.9em; min-height: 45px; display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
-        .item { background: rgba(0,0,0,0.4); padding: 15px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid; }
+        
+        /* Perbaikan CSS agar rapi */
+        .item { background: rgba(0,0,0,0.4); padding: 15px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid; overflow: hidden; }
+        .item div { flex: 1; min-width: 0; margin-right: 10px; }
+        .item strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item button { width: 40px; flex-shrink: 0; padding: 8px; }
+        
         #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding: 20px; }
     </style>
 </head>
@@ -51,12 +57,8 @@
     let alarmInt;
 
     function initAudio() {
-        if (!ctx) {
-            ctx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (ctx.state === 'suspended') {
-            ctx.resume();
-        }
+        if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        if (ctx.state === 'suspended') { ctx.resume(); }
     }
 
     function play(k) {
@@ -93,7 +95,7 @@
         let l = '<h2>Agenda Mendatang</h2>';
         d.sort((a,b) => new Date(a.w)-new Date(b.w)).forEach(a => {
             let color = {'ringan':'#00ff44','agak-penting':'#ffea00','sangat-penting':'#ff1100'}[a.k];
-            l += `<div class="item" style="border-color:${color}"><div><strong>${a.j}</strong><br><small>${new Date(a.w).toLocaleString()}</small></div><button style="width:auto;" onclick="hapus(${a.id})">X</button></div>`;
+            l += `<div class="item" style="border-color:${color}"><div><strong>${a.j}</strong><br><small>${new Date(a.w).toLocaleString()}</small></div><button onclick="hapus(${a.id})">X</button></div>`;
         });
         document.getElementById('list').innerHTML = l;
     }
