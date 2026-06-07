@@ -9,13 +9,12 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2693/2693507.png">
     <title>Agenda Kegiatan</title>
     <style>
-        /* (Gunakan CSS yang sudah Anda buat sebelumnya) */
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
         :root { --text-main: #ffffff; --accent-red: #ff3b30; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         body { margin: 0; padding: 20px; min-height: 100vh; color: var(--text-main); background: linear-gradient(-45deg, #0f0c29, #302b63, #050505); background-size: 400% 400%; animation: bg 15s ease infinite; }
         @keyframes bg { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-        .box { background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .box { background: rgba(20, 20, 20, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
         h1 { font-family: 'Oswald', sans-serif; font-size: 2.2em; text-align: center; text-transform: uppercase; background: -webkit-linear-gradient(45deg, #00ff44, #ccff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         input, select { width: 100%; padding: 15px; margin: 5px 0; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; }
         button { width: 100%; padding: 15px; background: #ff3b30; color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
@@ -44,14 +43,24 @@
         <h2 id="mj">WAKTU TIBA!</h2>
         <button id="bs" onclick="stop()">Hentikan Alarm</button>
     </div></div>
+
 <script>
     let d = JSON.parse(localStorage.getItem('ag')) || [];
     let nav = new Date();
-    let ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let ctx = null;
     let alarmInt;
 
+    function initAudio() {
+        if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+    }
+
     function play(k) {
-        if (ctx.state === 'suspended') ctx.resume();
+        initAudio();
         let osc = ctx.createOscillator();
         let gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -61,6 +70,7 @@
     }
 
     function tambah() {
+        initAudio();
         let j = document.getElementById('j').value, w = document.getElementById('w').value, k = document.getElementById('k').value;
         if (!j || !w) return alert('Lengkapi data!');
         d.push({ id: Date.now(), j, w, k, s: false });
@@ -90,6 +100,7 @@
 
     function hapus(id) { d = d.filter(a => a.id != id); localStorage.setItem('ag', JSON.stringify(d)); render(); }
     function stop() { document.getElementById('modal').style.display = 'none'; clearInterval(alarmInt); }
+    
     setInterval(() => {
         d.forEach(a => {
             if (!a.s && Math.abs(new Date(a.w).getTime() - Date.now()) < 3000) {
